@@ -1,9 +1,11 @@
 package main
 
-//This file is the main orchestrator of the application. It initializes the application environment and starts the server.
+// This file initializes the application environment and starts the server.
 
 import (
 	"database/sql"
+	"log"
+	"net/http"
 )
 
 // AppEnv holds the application environment, which includes the database connection.
@@ -13,4 +15,25 @@ type AppEnv struct {
 
 func main() {
 
+	//initializing the database
+	db, err := InitDB("urls.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//checking if Table exist and creating if it doesnt
+	err = CreateTable(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//creating the app Struct
+	app := &AppEnv{DB: db}
+
+	//registering the routes
+	http.HandleFunc("/shorten", app.ShortenURL)
+	http.HandleFunc("/", app.redirect)
+
+	//telling Go to listen for requests
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
