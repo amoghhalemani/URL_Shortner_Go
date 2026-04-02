@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // AppEnv holds the application environment, which includes the database connection.
@@ -31,8 +33,8 @@ func main() {
 	app := &AppEnv{DB: db}
 
 	//registering the routes
-	http.HandleFunc("/shorten", app.ShortenURL)
-	http.HandleFunc("/", app.redirect)
+	http.HandleFunc("/shorten", logging(app.ShortenURL))
+	http.HandleFunc("/", logging(app.redirect))
 
 	//telling Go to listen for requests
 	log.Fatal(http.ListenAndServe(":8080", nil))
