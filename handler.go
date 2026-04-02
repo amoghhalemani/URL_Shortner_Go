@@ -3,19 +3,30 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
 // function to orchastrate the url shortening
 func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	long := r.FormValue("url")
+
+	//checks for empty strings
 	if long == "" {
 		http.Error(w, "Bad Data", http.StatusBadRequest)
 		return
 	}
+
+	//checks if url format is correct using net/url library
+	u, err := url.Parse(long)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		http.Error(w, "Enter correct URL", http.StatusBadRequest)
+		return
+	}
+
 	smallByte := hashing(long)
 	short := encoder(smallByte)
-	_, err := app.DB.Exec("INSERT INTO urls (short,long) VALUES (?,?)", short, long)
+	_, err = app.DB.Exec("INSERT INTO urls (short,long) VALUES (?,?)", short, long)
 	if err != nil {
 		http.Error(w, "something went Wrong", http.StatusInternalServerError)
 		return
