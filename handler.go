@@ -9,11 +9,15 @@ import (
 // function to orchastrate the url shortening
 func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	long := r.FormValue("url")
+	if long == "" {
+		http.Error(w, "Bad Data", http.StatusBadRequest)
+		return
+	}
 	smallByte := hashing(long)
 	short := encoder(smallByte)
 	_, err := app.DB.Exec("INSERT INTO urls (short,long) VALUES (?,?)", short, long)
 	if err != nil {
-		http.Error(w, "somenthing went Wrong", http.StatusInternalServerError)
+		http.Error(w, "something went Wrong", http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", short)
