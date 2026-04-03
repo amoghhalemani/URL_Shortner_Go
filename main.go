@@ -12,6 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
+	"github.com/joho/godotenv"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -21,6 +24,17 @@ type AppEnv struct {
 }
 
 func main() {
+
+	//Sentry for Error Monitoring
+	godotenv.Load()
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+	})
+	if err != nil {
+		log.Fatalf("sentry.Init: %s", err)
+	}
+	// Flush buffered events before the program terminates.
+	defer sentry.Flush(2 * time.Second)
 
 	//initializing the database
 	db, err := InitDB("urls.db")
@@ -55,6 +69,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
+	//gracefull shutdown
 	cntxt, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	log.Printf("Server Shutting Down Gracefully...")
