@@ -49,6 +49,7 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
+	log.Printf("Server Ready to Listen to Requests...")
 	go server.ListenAndServe()
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -56,5 +57,9 @@ func main() {
 
 	cntxt, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	server.Shutdown(cntxt)
+	log.Printf("Server Shutting Down Gracefully...")
+	err = server.Shutdown(cntxt)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
