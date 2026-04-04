@@ -47,6 +47,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//checking if index exist and creating if it doesnt
+	err = CreateIndex(db)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	//creating the app Struct
 	app := &AppEnv{DB: db}
