@@ -15,11 +15,13 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 // AppEnv holds the application environment, which includes the database connection.
 type AppEnv struct {
-	DB *sql.DB
+	DB    *sql.DB
+	Redis *redis.Client
 }
 
 func main() {
@@ -42,6 +44,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//initializing Redis Client
+	rdb := redis.NewClient(&redis.Options{
+		Addr: os.Getenv("REDIS_URL"),
+	})
+	err = rdb.Ping(context.Background()).Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	//checking if Table exist and creating if it doesnt
 	err = CreateTable(db)
 	if err != nil {
@@ -54,7 +65,7 @@ func main() {
 	}
 
 	//creating the app Struct
-	app := &AppEnv{DB: db}
+	app := &AppEnv{DB: db, Redis: rdb}
 
 	//registering the routes
 	http.HandleFunc("/shorten", logging(app.ShortenURL))

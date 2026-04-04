@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // function to orchastrate the url shortening
@@ -38,11 +39,21 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 func (app *AppEnv) redirect(w http.ResponseWriter, r *http.Request) {
 	var long string
 	short := strings.TrimPrefix(r.URL.Path, "/")
-	//different syntax for Querying
-	err := app.DB.QueryRow("SELECT original_url FROM urls WHERE short_url = $1", short).Scan(&long)
+	//checking for Redis hits
+	cntxt := r.Context()
+	val, err := app.Redis.Get(cntxt, short).Result()
+	if err == nil {
+		app.Redis.Expire(cntxt, short, 24*time.Hour)
+		http.Redirect(w, r, val, http.StatusMovedPermanently)
+		return
+	}
+
+	//different syntax for Querying in Postgres
+	err = app.DB.QueryRow("SELECT original_url FROM urls WHERE short_url = $1", short).Scan(&long)
 	if err != nil {
 		http.Error(w, "Please Provide the correct url", http.StatusNotFound)
 		return
 	}
+	app.Redis.Set(cntxt, short, long, 24*time.Hour)
 	http.Redirect(w, r, long, http.StatusMovedPermanently)
 }
