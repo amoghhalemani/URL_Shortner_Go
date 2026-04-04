@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 // function to orchastrate the url shortening
 func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	long := r.FormValue("url")
+	alias := r.FormValue("alias")
 
 	//checks for empty strings
 	if long == "" {
@@ -25,14 +27,46 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	smallByte := hashing(long)
-	short := encoder(smallByte)
-	_, err = app.DB.Exec("INSERT INTO urls (short_url,original_url) VALUES ($1,$2)", short, long)
-	if err != nil {
-		http.Error(w, "something went Wrong", http.StatusInternalServerError)
-		return
+	//check if alias is given
+	if alias == "" {
+		//check if url already exists in the db
+		var shortExist string
+		err = app.DB.QueryRow("SELECT short_url FROM urls WHERE original_url =$1", long).Scan(&shortExist)
+		if err != nil && err != sql.ErrNoRows {
+			http.Error(w, "something went Wrong", http.StatusInternalServerError)
+			return
+		}
+		if shortExist != "" {
+			fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", shortExist)
+		} else {
+			smallByte := hashing(long)
+			short := encoder(smallByte)
+			_, err = app.DB.Exec("INSERT INTO urls (short_url,original_url) VALUES ($1,$2)", short, long)
+			if err != nil {
+				http.Error(w, "something went Wrong", http.StatusInternalServerError)
+				return
+			}
+			fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", short)
+		}
+	} else {
+		//check if alias is already taken
+		var aliasExist string
+		err = app.DB.QueryRow("SELECT short_url FROM urls WHERE short_url =$1", alias).Scan(&aliasExist)
+		if err != nil && err != sql.ErrNoRows {
+			http.Error(w, "something went Wrong", http.StatusInternalServerError)
+			return
+		}
+		if aliasExist != "" {
+			fmt.Fprintf(w, "Custom URL already Taken!")
+			return
+		}
+		_, err := app.DB.Exec("INSERT INTO urls (short_url,original_url) VALUES ($1,$2)", alias, long)
+		if err != nil {
+			http.Error(w, "something went Wrong", http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", alias)
 	}
-	fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", short)
 }
 
 // function to redirect to the original url
