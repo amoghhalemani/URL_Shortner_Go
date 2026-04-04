@@ -14,8 +14,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
-
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 // AppEnv holds the application environment, which includes the database connection.
@@ -37,7 +36,8 @@ func main() {
 	defer sentry.Flush(2 * time.Second)
 
 	//initializing the database
-	db, err := InitDB("urls.db")
+	dburl := os.Getenv("DB_URL")
+	db, err := InitDB(dburl)
 	if err != nil {
 		log.Fatal(err)
 	}
