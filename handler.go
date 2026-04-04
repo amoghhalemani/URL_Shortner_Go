@@ -26,7 +26,7 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	smallByte := hashing(long)
 	short := encoder(smallByte)
-	_, err = app.DB.Exec("INSERT INTO urls (short,long) VALUES (?,?)", short, long)
+	_, err = app.DB.Exec("INSERT INTO urls (short_url,original_url) VALUES ($1,$2)", short, long)
 	if err != nil {
 		http.Error(w, "something went Wrong", http.StatusInternalServerError)
 		return
@@ -39,7 +39,7 @@ func (app *AppEnv) redirect(w http.ResponseWriter, r *http.Request) {
 	var long string
 	short := strings.TrimPrefix(r.URL.Path, "/")
 	//different syntax for Querying
-	err := app.DB.QueryRow("SELECT long FROM urls WHERE short = ?", short).Scan(&long)
+	err := app.DB.QueryRow("SELECT original_url FROM urls WHERE short_url = $1", short).Scan(&long)
 	if err != nil {
 		http.Error(w, "Please Provide the correct url", http.StatusNotFound)
 		return
