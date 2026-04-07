@@ -13,6 +13,9 @@ import (
 func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	long := r.FormValue("url")
 	alias := r.FormValue("alias")
+	expiry := r.FormValue("expiry")
+
+	var expiresAt *time.Time
 
 	//checks for empty strings
 	if long == "" {
@@ -25,6 +28,16 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	if err != nil || u.Scheme == "" || u.Host == "" {
 		http.Error(w, "Enter correct URL", http.StatusBadRequest)
 		return
+	}
+
+	//Expiry date format Validation
+	if expiry != "" {
+		t, err := time.Parse("2006-01-02", expiry)
+		if err != nil {
+			http.Error(w, "Invalid Date Format. Use YYYY-MM-DD", http.StatusBadRequest)
+			return
+		}
+		expiresAt = &t
 	}
 
 	//check if alias is given
@@ -41,7 +54,7 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		} else {
 			smallByte := hashing(long)
 			short := encoder(smallByte)
-			_, err = app.DB.Exec("INSERT INTO urls (short_url,original_url) VALUES ($1,$2)", short, long)
+			_, err = app.DB.Exec("INSERT INTO urls (short_url,original_url,expires_at) VALUES ($1,$2,$3)", short, long, expiresAt)
 			if err != nil {
 				http.Error(w, "something went Wrong", http.StatusInternalServerError)
 				return
@@ -60,7 +73,7 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Custom URL already Taken!")
 			return
 		}
-		_, err := app.DB.Exec("INSERT INTO urls (short_url,original_url) VALUES ($1,$2)", alias, long)
+		_, err := app.DB.Exec("INSERT INTO urls (short_url,original_url,expires_at) VALUES ($1,$2,$3)", alias, long, expiresAt)
 		if err != nil {
 			http.Error(w, "something went Wrong", http.StatusInternalServerError)
 			return
