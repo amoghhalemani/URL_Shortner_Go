@@ -19,7 +19,7 @@ func InitDB(connStr string) (*sql.DB, error) {
 
 // function to check for if table exists in db
 func CreateTable(DB *sql.DB) error {
-	_, err := DB.Exec("CREATE TABLE IF NOT EXISTS urls (short_url TEXT, original_url TEXT)")
+	_, err := DB.Exec("CREATE TABLE IF NOT EXISTS urls (short_url TEXT, original_url TEXT, expires_at TIMESTAMP)")
 	return err
 }
 
