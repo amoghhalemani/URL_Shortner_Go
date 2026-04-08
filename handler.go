@@ -39,6 +39,11 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		}
 		expiresAt = &t
 	}
+	//checking if Time is in future
+	if expiresAt != nil && expiresAt.Before(time.Now()) {
+		http.Error(w, "Expiry date must be in future", http.StatusBadRequest)
+		return
+	}
 
 	//check if alias is given
 	if alias == "" {
@@ -85,6 +90,7 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 // function to redirect to the original url
 func (app *AppEnv) redirect(w http.ResponseWriter, r *http.Request) {
 	var long string
+	var expiresAt sql.NullTime
 	short := strings.TrimPrefix(r.URL.Path, "/")
 	//checking for Redis hits
 	cntxt := r.Context()
@@ -96,11 +102,23 @@ func (app *AppEnv) redirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//different syntax for Querying in Postgres
-	err = app.DB.QueryRow("SELECT original_url FROM urls WHERE short_url = $1", short).Scan(&long)
+	err = app.DB.QueryRow("SELECT original_url,expires_at FROM urls WHERE short_url = $1", short).Scan(&long, &expiresAt)
+
 	if err != nil {
 		http.Error(w, "Please Provide the correct url", http.StatusNotFound)
 		return
 	}
-	app.Redis.Set(cntxt, short, long, 24*time.Hour)
+
+	//checking if link is expired
+	if expiresAt.Valid && expiresAt.Time.Before(time.Now()) {
+		http.Error(w, "Link has Expired", http.StatusGone)
+		return
+	}
+
+	// Only add to Redis Cache if expiry is not set
+	if !expiresAt.Valid {
+		app.Redis.Set(cntxt, short, long, 24*time.Hour)
+	}
 	http.Redirect(w, r, long, http.StatusMovedPermanently)
+
 }
