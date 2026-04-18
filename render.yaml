@@ -9,17 +9,10 @@ services:
           name: url-shortener-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          name: url-shortener-redis
-          type: redis
-          property: connectionString
+        sync: false
       - key: SENTRY_DSN
         sync: false
 
 databases:
   - name: url-shortener-db
-    plan: free
-
-redis:
-  - name: url-shortener-redis
     plan: free
