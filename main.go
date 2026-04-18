@@ -68,8 +68,8 @@ func main() {
 	app := &AppEnv{DB: db, Redis: rdb}
 
 	//registering the routes
-	http.HandleFunc("/shorten", logging(app.ShortenURL))
-	http.HandleFunc("/", logging(app.redirect))
+	http.HandleFunc("/shorten", logging(app.rateLimiter(app.ShortenURL)))
+	http.HandleFunc("/", logging(app.rateLimiter(app.redirect)))
 
 	//telling Go to listen for requests
 	server := &http.Server{
