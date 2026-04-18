@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: url-shortener
+    runtime: docker
+    plan: free
+    envVars:
+      - key: DB_URL
+        fromDatabase:
+          name: url-shortener-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: url-shortener-redis
+          type: redis
+          property: connectionString
+      - key: SENTRY_DSN
+        sync: false
+
+databases:
+  - name: url-shortener-db
+    plan: free
+
+redis:
+  - name: url-shortener-redis
+    plan: free
