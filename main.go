@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -40,8 +39,6 @@ func main() {
 
 	//initializing the database
 	dburl := os.Getenv("DB_URL")
-	dburl = strings.ReplaceAll(dburl, "postgresql://", "postgres://")
-	os.Setenv("DB_URL", dburl)
 	db, err := InitDB(dburl)
 	if err != nil {
 		log.Fatal(err)
