@@ -39,6 +39,7 @@ func main() {
 
 	//initializing the database
 	dburl := os.Getenv("DB_URL")
+	log.Printf("Connecting to DB: %s", dburl)
 	db, err := InitDB(dburl)
 	if err != nil {
 		log.Fatal(err)
