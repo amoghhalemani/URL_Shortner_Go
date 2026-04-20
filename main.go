@@ -45,9 +45,11 @@ func main() {
 	}
 
 	//initializing Redis Client
-	rdb := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_URL"),
-	})
+	opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	rdb := redis.NewClient(opt)
 	err = rdb.Ping(context.Background()).Err()
 	if err != nil {
 		log.Fatal(err)
