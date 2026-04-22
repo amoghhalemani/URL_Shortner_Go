@@ -6,7 +6,7 @@ import (
 
 // intializing the database connection
 func InitDB(connStr string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", connStr)
+	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		return nil, err
 	}
