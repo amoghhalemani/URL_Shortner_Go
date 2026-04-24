@@ -100,7 +100,7 @@
       submitBtn.textContent = 'Shortening...';
 
       const formData = new URLSearchParams();
-      formData.append('long', document.getElementById('long-url').value);
+      formData.append('url', document.getElementById('long-url').value);
       
       const alias = document.getElementById('alias').value;
       const expiry = document.getElementById('expiry').value;

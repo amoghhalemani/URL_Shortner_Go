@@ -2,12 +2,34 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
+
+// Helper for sending JSON errors
+func sendJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	// This creates {"message": "Your error text"}
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": message,
+	})
+}
+
+// Helper for sending JSON success responses
+func sendJSONSuccess(w http.ResponseWriter, shortUrl string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	// This creates {"shortUrl": "http://localhost:8080/alias"}
+	json.NewEncoder(w).Encode(map[string]string{
+		"shortUrl": shortUrl,
+	})
+}
 
 // function to orchastrate the url shortening
 func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
@@ -19,14 +41,14 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	//checks for empty strings
 	if long == "" {
-		http.Error(w, "Bad Data", http.StatusBadRequest)
+		sendJSONError(w, "Bad Data", http.StatusBadRequest)
 		return
 	}
 
 	//checks if url format is correct using net/url library
 	u, err := url.Parse(long)
 	if err != nil || u.Scheme == "" || u.Host == "" {
-		http.Error(w, "Enter correct URL", http.StatusBadRequest)
+		sendJSONError(w, "Enter correct URL", http.StatusBadRequest)
 		return
 	}
 
@@ -34,14 +56,14 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	if expiry != "" {
 		t, err := time.Parse("2006-01-02", expiry)
 		if err != nil {
-			http.Error(w, "Invalid Date Format. Use YYYY-MM-DD", http.StatusBadRequest)
+			sendJSONError(w, "Invalid Date Format. Use YYYY-MM-DD", http.StatusBadRequest)
 			return
 		}
 		expiresAt = &t
 	}
 	//checking if Time is in future
 	if expiresAt != nil && expiresAt.Before(time.Now()) {
-		http.Error(w, "Expiry date must be in future", http.StatusBadRequest)
+		sendJSONError(w, "Expiry date must be in future", http.StatusBadRequest)
 		return
 	}
 
@@ -51,39 +73,39 @@ func (app *AppEnv) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		var shortExist string
 		err = app.DB.QueryRow("SELECT short_url FROM urls WHERE original_url =$1", long).Scan(&shortExist)
 		if err != nil && err != sql.ErrNoRows {
-			http.Error(w, "something went Wrong", http.StatusInternalServerError)
+			sendJSONError(w, "something went Wrong", http.StatusInternalServerError)
 			return
 		}
 		if shortExist != "" {
-			fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", shortExist)
+			sendJSONSuccess(w, "http://localhost:8080/"+shortExist)
 		} else {
 			smallByte := hashing(long)
 			short := encoder(smallByte)
 			_, err = app.DB.Exec("INSERT INTO urls (short_url,original_url,expires_at) VALUES ($1,$2,$3)", short, long, expiresAt)
 			if err != nil {
-				http.Error(w, "something went Wrong", http.StatusInternalServerError)
+				sendJSONError(w, "something went Wrong", http.StatusInternalServerError)
 				return
 			}
-			fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", short)
+			sendJSONSuccess(w, "http://localhost:8080/"+short)
 		}
 	} else {
 		//check if alias is already taken
 		var aliasExist string
 		err = app.DB.QueryRow("SELECT short_url FROM urls WHERE short_url =$1", alias).Scan(&aliasExist)
 		if err != nil && err != sql.ErrNoRows {
-			http.Error(w, "something went Wrong", http.StatusInternalServerError)
+			sendJSONError(w, "something went Wrong", http.StatusInternalServerError)
 			return
 		}
 		if aliasExist != "" {
-			fmt.Fprintf(w, "Custom URL already Taken!")
+			sendJSONError(w, "Custom URL already Taken!", http.StatusConflict)
 			return
 		}
 		_, err := app.DB.Exec("INSERT INTO urls (short_url,original_url,expires_at) VALUES ($1,$2,$3)", alias, long, expiresAt)
 		if err != nil {
-			http.Error(w, "something went Wrong", http.StatusInternalServerError)
+			sendJSONError(w, "something went Wrong", http.StatusInternalServerError)
 			return
 		}
-		fmt.Fprintf(w, "Your Short URL: http://localhost:8080/%s", alias)
+		sendJSONSuccess(w, "http://localhost:8080/"+alias)
 	}
 }
 

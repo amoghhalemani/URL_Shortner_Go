@@ -70,6 +70,9 @@ func main() {
 	//creating the app Struct
 	app := &AppEnv{DB: db, Redis: rdb}
 
+	// Serve frontend files
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
 	//registering the routes
 	http.HandleFunc("/shorten", logging(app.rateLimiter(app.ShortenURL)))
 	http.HandleFunc("/", logging(app.rateLimiter(app.redirect)))
